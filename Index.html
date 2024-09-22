@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kompakt Időjárás Előrejelző</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: url('NAPPAL.png') center/cover no-repeat;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #fff;
+            transition: background 0.5s;
+            backdrop-filter: blur(7px);
+        }
+
+        .night-mode {
+            background: url('ÉJJEL.png') center/cover no-repeat;
+            backdrop-filter: blur(7px);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            padding: 1rem;
+            box-shadow: 0 8px 32px rgba(255, 255, 255, 0.786);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .search-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: rgb(255, 255, 255);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem;
+            border-radius: 10px;
+        }
+
+        .search-bar input {
+            width: 80%;
+            background: none;
+            border: none;
+            outline: none;
+            color: #fff;
+            padding: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .search-bar button {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: #00bfff;
+            color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .current-weather {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .current-weather h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .current-weather img {
+            width: 80px;
+        }
+
+        .current-weather div {
+            text-align: center;
+        }
+
+        .details {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .details div {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .details div p {
+            margin-top: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .hourly-forecast {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 1rem;
+        }
+
+        .hourly-forecast div {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.8rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .hourly-forecast div img {
+            width: 50px;
+        }
+
+        .hourly-forecast div p {
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .three-day-forecast {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .forecast-day {
+            margin: 0.5rem 0;
+        }
+
+        .test-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 0.5rem 1rem;
+            background: #00bfff;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="search-bar">
+            <input type="text" placeholder="Város keresése..." id="city-search">
+            <button onclick="getWeatherData()">Keresés</button>
+        </div>
+
+        <div class="current-weather">
+            <div>
+                <h1 id="current-temp">--°C</h1>
+                <p id="current-city">N/A</p>
+                <p id="date">--</p>
+                    <div id="forecast-day-1" class="forecast-day"></div>
+                    <div id="forecast-day-2" class="forecast-day"></div>
+                    <div id="forecast-day-3" class="forecast-day"></div>
+            </div>
+            <img src="" alt="" id="current-icon">
+        </div>
+
+        <div class="details">
+            <div>
+                <p>Pára</p>
+                <p id="humidity">--%</p>
+            </div>
+            <div>
+                <p>Szél</p>
+                <p id="wind">-- km/h</p>
+            </div>
+            <div>
+                <p>Felhőzet</p>
+                <p id="cloudiness">--%</p>
+            </div>
+            <div>
+                <p>Légnyomás</p>
+                <p id="pressure">-- hPa</p>
+            </div>
+        </div>
+
+        
+        <div class="hourly-forecast" id="hourly-forecast">
+            <!-- Dinamikusan töltve -->
+        </div>
+    </div>
+
+    <button class="test-button" onclick="toggleNightMode()">Napszak váltó</button>
+
+    <script>
+        const apiKey = 'df24051cee16f676e8168bab8b2ae28c';
+        let timeInterval;
+        let isNightMode = false;
+
+        document.getElementById('city-search').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                getWeatherData();
+            }
+        });
+
+        function updateBackground() {
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+            const currentTime = hour * 100 + minute;
+
+            if (currentTime >= 618 && currentTime <= 1828) {
+                document.body.classList.remove('night-mode');
+                isNightMode = false; // Visszaállítjuk nappali módra
+            } else {
+                document.body.classList.add('night-mode');
+                isNightMode = true; // Visszaállítjuk esti módra
+            }
+        }
+
+        function toggleNightMode() {
+            isNightMode = !isNightMode;
+            if (isNightMode) {
+                document.body.classList.add('night-mode');
+            } else {
+                document.body.classList.remove('night-mode');
+            }
+        }
+
+        async function getWeatherData() {
+            const city = document.getElementById('city-search').value;
+            if (!city) {
+                alert('Kérjük, adjon meg egy várost!');
+                return;
+            }
+
+            const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&lang=hu&appid=${apiKey}`;
+            const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=metric&lang=hu&appid=${apiKey}`;
+
+            try {
+                const weatherResponse = await fetch(weatherUrl);
+                if (!weatherResponse.ok) {
+                    throw new Error("Ilyen hely nem található");
+                }
+
+                const weatherData = await weatherResponse.json();
+                updateCurrentWeather(weatherData);
+
+                const forecastResponse = await fetch(forecastUrl);
+                const forecastData = await forecastResponse.json();
+                updateForecast(forecastData);
+            } catch (error) {
+                alert(error.message); // "Ilyen hely nem található"
+            }
+        }
+
+        function updateCurrentWeather(data) {
+            const iconCode = data.weather[0].icon;
+            document.getElementById('current-icon').src = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+            document.getElementById('current-temp').textContent = `${Math.round(data.main.temp)}°C`;
+            document.getElementById('current-city').textContent = data.name;
+
+            const timezoneOffset = data.timezone;
+            updateLocalTime(timezoneOffset);
+
+            document.getElementById('humidity').textContent = `${data.main.humidity}%`;
+            document.getElementById('wind').textContent = `${data.wind.speed} km/h`;
+            document.getElementById('cloudiness').textContent = `${data.clouds.all}%`;
+            document.getElementById('pressure').textContent = `${data.main.pressure} hPa`;
+        }
+
+        function getDateTime() {
+            let now = new Date();
+            let hour = now.getHours();
+            let minute = now.getMinutes();
+
+            let days = [
+                "Vasárnap", "Hétfő", "Kedd", "Szerda", 
+                "Csütörtök", "Péntek", "Szombat",
+            ];
+            hour = hour < 10 ? "0" + hour : hour;
+            minute = minute < 10 ? "0" + minute : minute;
+            let dayString = days[now.getDay()];
+            return `${dayString}, ${hour}:${minute}`;
+        }
+
+        function updateLocalTime(timezoneOffset) {
+            if (timeInterval) clearInterval(timeInterval);
+
+            document.getElementById('date').innerText = getDateTime();
+            timeInterval = setInterval(() => {
+                document.getElementById('date').innerText = getDateTime();
+            }, 1000);
+        }
+
+        
+
+        function updateForecast(data) {
+            const hourlyForecast = document.getElementById('hourly-forecast');
+            hourlyForecast.innerHTML = '';
+
+            const hourlyData = data.list.slice(0, 8);
+            hourlyData.forEach(hour => {
+                const time = new Date(hour.dt_txt).toLocaleTimeString('hu-HU', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                });
+                const temp = Math.round(hour.main.temp);
+                const icon = hour.weather[0].icon;
+
+                hourlyForecast.innerHTML += `
+                    <div>
+                        <p>${time}</p>
+                        <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="weather icon">
+                        <p>${temp}°C</p>
+                    </div>
+                `;
+            });
+
+            updateThreeDayForecast(data);
+        }
+
+        function updateThreeDayForecast(data) {
+            const days = data.list.filter(item => item.dt_txt.includes("12:00:00")); // Kiválasztjuk a napi középértékeket
+            const dayNames = ["Vasárnap", "Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat"];
+
+            for (let i = 0; i < 3; i++) {
+                const dayIndex = (new Date().getDay() + i + 1) % 7; // Az aktuális nap + i
+                const day = dayNames[dayIndex];
+                const temp = Math.round(days[i].main.temp);
+                const cloudiness = days[i].clouds.all;
+                document.getElementById(`forecast-day-${i + 1}`).innerHTML = `${day}: ${temp}°C, Felhőzet: ${cloudiness}%`;
+            }
+        }
+
+        setInterval(updateBackground, 60000);  // 1 perces frissítés
+        updateBackground();  // kezdeti háttér beállítás
+    </script>
+</body>
+</html>
