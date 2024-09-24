@@ -201,7 +201,7 @@
 
         
         <div class="hourly-forecast" id="hourly-forecast">
-            <!-- Dinamikusan töltve -->
+          
         </div>
     </div>
 
@@ -226,10 +226,10 @@
 
             if (currentTime >= 618 && currentTime <= 1828) {
                 document.body.classList.remove('night-mode');
-                isNightMode = false; // Visszaállítjuk nappali módra
+                isNightMode = false; 
             } else {
                 document.body.classList.add('night-mode');
-                isNightMode = true; // Visszaállítjuk esti módra
+                isNightMode = true; 
             }
         }
 
@@ -265,7 +265,7 @@
                 const forecastData = await forecastResponse.json();
                 updateForecast(forecastData);
             } catch (error) {
-                alert(error.message); // "Ilyen hely nem található"
+                alert(error.message);
             }
         }
 
@@ -336,11 +336,11 @@
         }
 
         function updateThreeDayForecast(data) {
-            const days = data.list.filter(item => item.dt_txt.includes("12:00:00")); // Kiválasztjuk a napi középértékeket
+            const days = data.list.filter(item => item.dt_txt.includes("12:00:00")); 
             const dayNames = ["Vasárnap", "Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat"];
 
             for (let i = 0; i < 3; i++) {
-                const dayIndex = (new Date().getDay() + i + 1) % 7; // Az aktuális nap + i
+                const dayIndex = (new Date().getDay() + i + 1) % 7; 
                 const day = dayNames[dayIndex];
                 const temp = Math.round(days[i].main.temp);
                 const cloudiness = days[i].clouds.all;
@@ -348,8 +348,8 @@
             }
         }
 
-        setInterval(updateBackground, 60000);  // 1 perces frissítés
-        updateBackground();  // kezdeti háttér beállítás
+        setInterval(updateBackground, 60000);  
+        updateBackground(); 
     </script>
 </body>
 </html>
